@@ -1,0 +1,5 @@
+pyTelegramBotAPI==4.12.0
+PyGithub==1.59.1
+requests==2.31.0
+geoip2==4.6.0
+python-dotenv==1.0.0
