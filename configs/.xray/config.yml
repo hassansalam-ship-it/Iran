@@ -1,0 +1,110 @@
+# ==================================================
+# ملف تكوين Xray - النسخة المتقدمة لإعداد Reality
+# معد خصيصاً لتجاوز الحجب في إيران
+# ==================================================
+
+log:
+  loglevel: warning                     # مستوى التسجيل (info, warning, error, debug)
+
+# ===================== المداخل =====================
+inbounds:
+  - port: 443                            # المنفذ الرئيسي (يمكن تغييره حسب الحاجة)
+    protocol: vless                       # بروتوكول VLESS (الأفضل حالياً)
+    settings:
+      clients:
+        - id: "UUID_GENERATED_BY_PYTHON"  # يتم توليده تلقائياً عن طريق البوت
+          flow: xtls-rprx-vision          # تدفق Vision (ضروري لـ Reality)
+      decryption: none
+      fallbacks: []                        # فارغة للتوافق
+
+    streamSettings:
+      network: tcp
+      security: reality                     # استخدام بروتوكول Reality
+      realitySettings:
+        dest: "www.samsung.com:443"         # الوجهة الحقيقية (يمكن تغييرها)
+        xver: 0
+        serverNames:
+          - "www.samsung.com"
+          - "samsung.com"
+          - "*.samsung.com"                  # Wildcard لمزيد من التوافق
+        privateKey: "YOUR_PRIVATE_KEY_HERE"  # سيتم استبداله عن طريق البوت
+        minClient: "1.2.3.4"                  # الحد الأدنى لإصدار العميل
+        maxClient: "1.2.3.5"                  # الحد الأقصى لإصدار العميل
+        shortIds:
+          - "16f5c854"                         # معرفات قصيرة متعددة
+          - "17f6c955"
+          - "18f7d056"
+          - ""                                  # معرف فارغ للتوافق مع بعض العملاء
+        settings:
+          publicKey: "YOUR_PUBLIC_KEY_HERE"    # المفتاح العام (يتم تحديثه تلقائياً)
+          fingerprint: "chrome"                 # بصمة المتصفح للتمويه
+
+      tcpSettings:
+        header:
+          type: none
+          request:                              # تمويه إضافي (اختياري)
+            version: "1.1"
+            method: "GET"
+            path: ["/"]
+            headers:
+              Host: ["www.samsung.com"]
+              User-Agent: 
+                - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+              Accept-Encoding: ["gzip, deflate"]
+              Connection: ["keep-alive"]
+
+    sniffing:                                 # كشف البروتوكولات
+      enabled: true
+      destOverride:
+        - http
+        - tls
+
+    allocate:                                 # إعدادات تخصيص المنفذ
+      strategy: always
+      refresh: 5
+      concurrency: 3
+
+# ===================== المخارج =====================
+outbounds:
+  - protocol: freedom
+    tag: direct
+    settings:
+      domainStrategy: UseIP                    # استخدام IP مباشر
+
+  - protocol: blackhole
+    tag: blocked
+    settings: {}
+
+  - protocol: dns
+    tag: dns-out
+    settings: {}
+
+# ===================== قواعد التوجيه =====================
+routing:
+  rules:
+    - type: field
+      outboundTag: direct
+      domain:
+        - "geosite:ir"                         # استثناء المواقع الإيرانية
+        - "geosite:private"
+
+    - type: field
+      outboundTag: blocked
+      domain:
+        - "geosite:category-ads-all"
+
+    - type: field
+      inboundTag:
+        - "api"
+      outboundTag: "api"
+
+# ===================== إعدادات DNS =====================
+dns:
+  servers:
+    - "https://8.8.8.8/dns-query"              # DNS عبر HTTPS من Google
+    - "https://1.1.1.1/dns-query"              # DNS عبر HTTPS من Cloudflare
+    - "localhost"                                # الرجوع إلى المحلي
+  queryStrategy: UseIPv4
+  disableCache: false
+  disableFallback: false
+  tag: dns-in
